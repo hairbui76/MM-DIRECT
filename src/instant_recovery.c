@@ -1441,8 +1441,13 @@ void stopCommandsExecuted(){
   Waits until the thread printCommandsExecutedToCSV_thread() is finished
 */
 void waitCommandsExecutedFinish(){
+  long long start_time = ustime();
   while(server.generate_executed_commands_csv == IR_ON){
-    sleep(0.05);
+    usleep(50000);
+    if ((ustime() - start_time) > 5000000) {
+      serverLog(LL_WARNING, "Commands CSV stop timeout reached. Forcing shutdown.");
+      break;
+    }
   }
 }
 
@@ -1660,8 +1665,13 @@ void stopIndexingReport(){
   Waits until the thread printIndexingReportToCSV_thread() is finished
 */
 void waitIndexingReportFinish(){
+  long long start_time = ustime();
   while(server.generate_indexing_report_csv == IR_ON){
-    sleep(0.05);
+    usleep(50000);
+    if ((ustime() - start_time) > 5000000) {
+      serverLog(LL_WARNING, "Indexing report stop timeout reached. Forcing shutdown.");
+      break;
+    }
   }
 }
 
@@ -2551,8 +2561,13 @@ void stop_loadDBFromIndexedLog(){
   Waits until the Indexer thread to finish
 */
 void waitLoadDBFromIndexedLogFinish(){
+  long long start_time = ustime();
   while(server.instant_recovery_performing == IR_ON){
-    sleep(0.05);
+    usleep(50000);
+    if ((ustime() - start_time) > 5000000) {
+      serverLog(LL_WARNING, "Load-from-indexed-log stop timeout reached. Forcing shutdown.");
+      break;
+    }
   }
 }
 
@@ -3298,8 +3313,13 @@ void stopIndexing(){
   Waits until the Indexer thread to finish
 */
 void waitIndexerFinish(){
+  long long start_time = ustime();
   while(server.indexer_performing == IR_ON){
-    sleep(0.05);
+    usleep(50000);
+    if ((ustime() - start_time) > 5000000) {
+      serverLog(LL_WARNING, "Indexer stop timeout reached. Forcing shutdown.");
+      break;
+    }
   }
 }
 
@@ -4296,8 +4316,13 @@ int stopMemtierBenchmark(){
   Waits until the Memtier thread to finish
 */
 void waitMemtierBenchmarkFinish(){
+  long long start_time = ustime();
   while(server.memtier_benchmark_performing == IR_ON){
-    sleep(0.05);
+    usleep(50000);
+    if ((ustime() - start_time) > 5000000) {
+      serverLog(LL_WARNING, "Memtier stop timeout reached. Forcing shutdown.");
+      break;
+    }
   }
 }
 

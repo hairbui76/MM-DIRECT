@@ -1582,6 +1582,7 @@ void initServerConfig(void) {
     server.recovery_start_time = -1;
     server.recovery_end_time = -1;
     server.database_shutdown_time = -1;
+    server.log_corruption_thread_started = 0;
 
     server.indexer_state = IR_OFF;
     server.indexer_performing = IR_OFF;
@@ -1592,6 +1593,7 @@ void initServerConfig(void) {
     server.seek_log_file = 0;
     server.display_indexer_information = IR_OFF; //disabled
     server.indexer_information_time_interaval = 60;
+    server.indexer_thread_started = 0;
     server.redisHostname = "127.0.0.1";
     server.redisPort = 6379;
     server.display_restorer_information = IR_OFF;
@@ -1606,6 +1608,7 @@ void initServerConfig(void) {
     server.number_checkpoints = 0;
     server.stop_checkpoint_after_benchmark = IR_OFF;
     server.accessed_tuples_logger_state = IR_OFF;
+    server.checkpoint_thread_started = 0;
 
     server.generate_recovery_report = IR_OFF; //disabled
     server.count_tuples_loaded_incr = 0;
@@ -1616,11 +1619,13 @@ void initServerConfig(void) {
     server.count_remaining_records_proc = 0;
     server.recovery_report_filename = "recovery_report.txt";
     server.generate_report_file_after_benchmarking = IR_ON;
+    server.generate_executed_commands_csv_thread_started = 0;
 
     server.generate_executed_commands_csv = IR_OFF; //disabled
     server.stop_generate_executed_commands_csv = IR_OFF; //disabled
     server.generate_setir_executed_commands_csv = IR_OFF; //disabled
     server.executed_commands_csv_filename = "datasets.csv";
+    server.load_data_incrementally_thread_started = 0;
 
     server.generate_indexing_report_csv = IR_OFF; //disabled
     server.stop_generate_indexing_report_csv = IR_OFF; //disabled
@@ -1642,6 +1647,7 @@ void initServerConfig(void) {
     server.number_restarts_after_time = 0;
     server.preload_database_and_restart = 0;
     server.number_restarts_after_preloading = 1;
+    server.memtier_benchmark_thread_started = 0;
 
     server.system_monitoring = IR_OFF;  
     server.stop_system_monitoring = IR_OFF;     
@@ -1649,6 +1655,7 @@ void initServerConfig(void) {
     server.system_monitoring_csv_filename = "system_monitoring/system_monitoring.csv";
     server.system_monitoring_time_interval = 10;    
     server.overwrite_system_monitoring  = IR_ON;     
+    server.system_monitoring_thread_started = 0;
 
     first_cmd_executed_List = NULL;
     last_cmd_executed_List = NULL;
@@ -4503,31 +4510,44 @@ int main(int argc, char **argv) {
 // ==================================================================================
         // Initiates the loading of the database using indexed log.
         if(server.instant_recovery_state == IR_ON){
-            pthread_create(&server.log_corruption_thread, NULL, corruptIndexedLog, NULL);
+            if (pthread_create(&server.log_corruption_thread, NULL, corruptIndexedLog, NULL) == 0) {
+                server.log_corruption_thread_started = 1;
+            }
             
             if(!preloaded){
                 serverLog(LL_NOTICE, "\n%s", getRedisIRSettings());
 
                 //Starts the normal daatabase IR (incremental IR).
-                pthread_create(&server.load_data_incrementally_thread, NULL, loadDBFromIndexedLog, NULL);
+                if (pthread_create(&server.load_data_incrementally_thread, NULL, loadDBFromIndexedLog, NULL) == 0) {
+                    server.load_data_incrementally_thread_started = 1;
+                }
             }
         }
 
         //Starts the benchmark performing.
-        if(server.memtier_benchmark_state == IR_ON)
-            pthread_create(&server.memtier_benchmark_thread, NULL, executeMemtierBenchmark, NULL); 
+        if(server.memtier_benchmark_state == IR_ON) {
+            if (pthread_create(&server.memtier_benchmark_thread, NULL, executeMemtierBenchmark, NULL) == 0) {
+                server.memtier_benchmark_thread_started = 1;
+            }
+        }
 
         //Generates information about executed commands to a CSV file
-        if(server.generate_executed_commands_csv == IR_ON)
-            pthread_create(&server.generate_executed_commands_csv_thread, NULL, printCommandsExecutedToCSV_thread, NULL); 
+        if(server.generate_executed_commands_csv == IR_ON) {
+            if (pthread_create(&server.generate_executed_commands_csv_thread, NULL, printCommandsExecutedToCSV_thread, NULL) == 0) {
+                server.generate_executed_commands_csv_thread_started = 1;
+            }
+        }
 
         //Generates information about indexing to a CSV file
         if(server.generate_indexing_report_csv == IR_ON)
             pthread_create(&server.indexing_report_thread, NULL, printIndexingReportToCSV_thread, NULL); 
 
         //Generates system statistics.
-        if(server.system_monitoring == IR_ON)
-            pthread_create(&server.system_monitoring_thread, NULL, printSysteMonitoringToCsv_thread, NULL); 
+        if(server.system_monitoring == IR_ON) {
+            if (pthread_create(&server.system_monitoring_thread, NULL, printSysteMonitoringToCsv_thread, NULL) == 0) {
+                server.system_monitoring_thread_started = 1;
+            }
+        }
 
 // ==================================================================================
 //    End

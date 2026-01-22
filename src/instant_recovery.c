@@ -1531,7 +1531,7 @@ void *printSysteMonitoringToCsv_thread() {
         zfree(tokens);
         fclose(arq_temp);
 
-        if(server.system_monitoring == IR_OFF)
+        if(server.system_monitoring == IR_ON)
           sleep(system_monitoring_time_delay);
 
     }while(server.system_monitoring == IR_ON);
@@ -1555,8 +1555,13 @@ void stopSystemMonitoringFinish(){
   Waits until the Indexer thread to finish
 */
 void waitSystemMonitoringFinish(){
+  long long start_time = ustime();
   while(server.system_monitoring == IR_ON){
-    sleep(0.05);
+    usleep(50000);
+    if ((ustime() - start_time) > 5000000) {
+      serverLog(LL_WARNING, "System monitoring stop timeout reached. Forcing shutdown.");
+      break;
+    }
   }
 }
 

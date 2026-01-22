@@ -35,6 +35,10 @@
 #include "hiredis.h"
 #include "uthash.h"
 
+commandExecuted *first_cmd_executed_List = NULL;
+commandExecuted *last_cmd_executed_List = NULL;
+indexingReport *first_indexing_report = NULL;
+indexingReport *last_indexing_report = NULL;
 
 
 struct client *createFakeClient(void);

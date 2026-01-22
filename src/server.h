@@ -124,7 +124,7 @@ typedef struct commandPerfomed {
     struct commandPerfomed *next;
    }commandExecuted;
 
-commandExecuted *first_cmd_executed_List, *last_cmd_executed_List;
+extern commandExecuted *first_cmd_executed_List, *last_cmd_executed_List;
 
 /* 
     Struct of indexing write rate. The Indexer component writes log records in te indexed log
@@ -142,7 +142,7 @@ typedef struct indexingReport_ts {
   struct indexingReport_ts *next;
 }indexingReport;
 
-indexingReport *first_indexing_report, *last_indexing_report;
+extern indexingReport *first_indexing_report, *last_indexing_report;
 
 /* Functions */
 char *getRedisIRSettings();

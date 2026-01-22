@@ -35,6 +35,10 @@
 #include "hiredis.h"
 #include "uthash.h"
 
+commandExecuted *first_cmd_executed_List = NULL;
+commandExecuted *last_cmd_executed_List = NULL;
+indexingReport *first_indexing_report = NULL;
+indexingReport *last_indexing_report = NULL;
 
 
 struct client *createFakeClient(void);
@@ -1527,7 +1531,7 @@ void *printSysteMonitoringToCsv_thread() {
         zfree(tokens);
         fclose(arq_temp);
 
-        if(server.system_monitoring == IR_OFF)
+        if(server.system_monitoring == IR_ON)
           sleep(system_monitoring_time_delay);
 
     }while(server.system_monitoring == IR_ON);
@@ -1551,8 +1555,13 @@ void stopSystemMonitoringFinish(){
   Waits until the Indexer thread to finish
 */
 void waitSystemMonitoringFinish(){
+  long long start_time = ustime();
   while(server.system_monitoring == IR_ON){
-    sleep(0.05);
+    usleep(50000);
+    if ((ustime() - start_time) > 5000000) {
+      serverLog(LL_WARNING, "System monitoring stop timeout reached. Forcing shutdown.");
+      break;
+    }
   }
 }
 
@@ -2365,8 +2374,12 @@ void *loadDBFromIndexedLog () {
 
     if(server.instant_recovery_synchronous == IR_OFF){
       if(strcmp(server.starts_log_indexing, "B") == 0){
-        pthread_create(&server.indexer_thread, NULL, indexesSequentialLogToIndexedLogV2, NULL);
-        pthread_create(&server.checkpoint_thread, NULL, executeCheckpoint, NULL);
+        if (pthread_create(&server.indexer_thread, NULL, indexesSequentialLogToIndexedLogV2, NULL) == 0) {
+          server.indexer_thread_started = 1;
+        }
+        if (pthread_create(&server.checkpoint_thread, NULL, executeCheckpoint, NULL) == 0) {
+          server.checkpoint_thread_started = 1;
+        }
       }
     }
 
@@ -2516,8 +2529,12 @@ void *loadDBFromIndexedLog () {
   //Starts the Indexer
   if(server.instant_recovery_synchronous == IR_OFF){
     if(strcmp(server.starts_log_indexing, "A") == 0){
-      pthread_create(&server.indexer_thread, NULL, indexesSequentialLogToIndexedLogV2, NULL);
-      pthread_create(&server.checkpoint_thread, NULL, executeCheckpoint, NULL);
+      if (pthread_create(&server.indexer_thread, NULL, indexesSequentialLogToIndexedLogV2, NULL) == 0) {
+        server.indexer_thread_started = 1;
+      }
+      if (pthread_create(&server.checkpoint_thread, NULL, executeCheckpoint, NULL) == 0) {
+        server.checkpoint_thread_started = 1;
+      }
     }
   }
 
@@ -4066,8 +4083,12 @@ int preloadDatabaseAndRestart(){
   }
 
   if(server.instant_recovery_state == IR_ON && server.instant_recovery_synchronous == IR_OFF){
-    pthread_create(&server.indexer_thread, NULL, indexesSequentialLogToIndexedLogV2, NULL);
-    pthread_create(&server.checkpoint_thread, NULL, executeCheckpoint, NULL);
+    if (pthread_create(&server.indexer_thread, NULL, indexesSequentialLogToIndexedLogV2, NULL) == 0) {
+      server.indexer_thread_started = 1;
+    }
+    if (pthread_create(&server.checkpoint_thread, NULL, executeCheckpoint, NULL) == 0) {
+      server.checkpoint_thread_started = 1;
+    }
   }
 
   return preloded;
@@ -4167,13 +4188,34 @@ void cancelIRThreads(){
   pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
   pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 
-  pthread_cancel(server.indexer_thread);
-  pthread_cancel(server.checkpoint_thread);
-  pthread_cancel(server.load_data_incrementally_thread);
-  pthread_cancel(server.generate_executed_commands_csv_thread);
-  pthread_cancel(server.memtier_benchmark_thread);
-  pthread_cancel(server.system_monitoring_thread);
-  pthread_cancel(server.log_corruption_thread);
+  if (server.indexer_thread_started) {
+    pthread_cancel(server.indexer_thread);
+    server.indexer_thread_started = 0;
+  }
+  if (server.checkpoint_thread_started) {
+    pthread_cancel(server.checkpoint_thread);
+    server.checkpoint_thread_started = 0;
+  }
+  if (server.load_data_incrementally_thread_started) {
+    pthread_cancel(server.load_data_incrementally_thread);
+    server.load_data_incrementally_thread_started = 0;
+  }
+  if (server.generate_executed_commands_csv_thread_started) {
+    pthread_cancel(server.generate_executed_commands_csv_thread);
+    server.generate_executed_commands_csv_thread_started = 0;
+  }
+  if (server.memtier_benchmark_thread_started) {
+    pthread_cancel(server.memtier_benchmark_thread);
+    server.memtier_benchmark_thread_started = 0;
+  }
+  if (server.system_monitoring_thread_started) {
+    pthread_cancel(server.system_monitoring_thread);
+    server.system_monitoring_thread_started = 0;
+  }
+  if (server.log_corruption_thread_started) {
+    pthread_cancel(server.log_corruption_thread);
+    server.log_corruption_thread_started = 0;
+  }
   //pthread_cancel(server.stop_memtier_benchmark);
   //pthread_cancel(server.restartAfterTime_thread);
 

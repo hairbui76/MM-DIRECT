@@ -124,7 +124,7 @@ typedef struct commandPerfomed {
     struct commandPerfomed *next;
    }commandExecuted;
 
-commandExecuted *first_cmd_executed_List, *last_cmd_executed_List;
+extern commandExecuted *first_cmd_executed_List, *last_cmd_executed_List;
 
 /* 
     Struct of indexing write rate. The Indexer component writes log records in te indexed log
@@ -142,7 +142,7 @@ typedef struct indexingReport_ts {
   struct indexingReport_ts *next;
 }indexingReport;
 
-indexingReport *first_indexing_report, *last_indexing_report;
+extern indexingReport *first_indexing_report, *last_indexing_report;
 
 /* Functions */
 char *getRedisIRSettings();
@@ -1078,6 +1078,7 @@ struct redisServer {
 	int instant_recovery_synchronous;	 			/* IR_(ON|OFF). On, off the instant recovery synchronous. */
     long long log_corruption;                       /* Time to simulate a log corruption by deleting the indexed log*/
     pthread_t log_corruption_thread;
+    int log_corruption_thread_started;
     int indexedlog_replicated;                      /* IR_(ON|OFF). On or Off the indexed log file replication */
     char *indexedlog_replicated_filename;           /* Path of indexed log file replicated */
     int rebuild_indexedlog;                         /* IR_(ON|OFF). On or Off the rebuilding of the indexe log if currupted */
@@ -1097,6 +1098,7 @@ struct redisServer {
 	int display_indexer_information;				/* Displays more information about the log indexing */
 	long long indexer_information_time_interaval;	/* Time interval (in seconds) to display indexing information */
 	pthread_t indexer_thread;						/* Pointer to control indexer thread */
+    int indexer_thread_started;
     pthread_t restartAfterTime_thread;
 	//Client for loading incrementally
 	char *redisHostname;							/* Redis server hostname */
@@ -1118,6 +1120,7 @@ struct redisServer {
     int accessed_tuples_logger_state;
 	struct checkpointReport *checkpointReport;		/* Linked list containing reports about each checkpoint performed */
     pthread_t checkpoint_thread;					/* Pointer to control checkpoint thread */
+    int checkpoint_thread_started;
 	//Recovery report
 	int generate_recovery_report;					/* IR_(ON|OFF). Allows to generate data for reports about instant recovery */
 	unsigned long long count_tuples_loaded_incr; 	/* Number of tuples (key/value) loaded into memory incrementally */
@@ -1130,12 +1133,14 @@ struct redisServer {
 	char *recovery_report_filename;					/* Path of stats file */
     int generate_report_file_after_benchmarking;
 	pthread_t load_data_incrementally_thread;				/* Pointer to control incremental data loading */
+    int load_data_incrementally_thread_started;
 	//Report of command executed
 	int generate_executed_commands_csv;				/* IR_(ON|OFF). Genarates a CSV file containing all commands executed*/
 	int generate_setir_executed_commands_csv;		/* IR_(ON|OFF). Adds SetIR commands executed in the CSV file*/
 	char *executed_commands_csv_filename;			/* Path of CSV file where properties about command execution during database performing to generate statistcs */
     int stop_generate_executed_commands_csv;
     pthread_t generate_executed_commands_csv_thread;
+    int generate_executed_commands_csv_thread_started;
     //Report the indexing writting
     int generate_indexing_report_csv;               /* IR_(ON|OFF). Genarates a CSV file containing indexing report */
     char *indexing_report_csv_filename;             /* Path of CSV file where properties about indexeing process to generate statistcs */
@@ -1161,6 +1166,7 @@ struct redisServer {
     long long restart_time_after_first_restart;
 	int restart_after_benchmarking;					/* Number of times to restart the database after a benchmark performing	*/
 	pthread_t memtier_benchmark_thread;				/* Pointer to control mentier bechmark thread */
+    int memtier_benchmark_thread_started;
     pthread_t stop_memtier_benchmark;
 	//Thread control 
 	//pthread_mutex_t lock_indexing;					/* Locks the thread thats indexing the sequantial log */
@@ -1175,6 +1181,7 @@ struct redisServer {
     int system_monitoring_time_interval;    
     int overwrite_system_monitoring; 
     pthread_t system_monitoring_thread;    
+    int system_monitoring_thread_started;
 
 	
 // ==================================================================================
